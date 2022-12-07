@@ -10,7 +10,6 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
@@ -27,19 +26,29 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMixin {
   late TransformationController controller;
   TapDownDetails? tabDownDetails;
+
+  late AnimationController animationController;
+  Animation<Matrix4>? animation;
 
   @override
   void initState() {
     super.initState();
     controller = TransformationController();
+    animationController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 300),
+    )..addListener(() {
+        controller.value = animation!.value;
+      });
   }
 
   @override
   void dispose() {
     controller.dispose();
+    animationController.dispose();
 
     super.dispose();
   }
@@ -72,14 +81,22 @@ class _MyHomePageState extends State<MyHomePage> {
           final zoomed = Matrix4.identity()
             ..translate(x, y)
             ..scale(scale);
-          final value = controller.value.isIdentity() ? zoomed : Matrix4.identity();
-          controller.value = value;
+          final end = controller.value.isIdentity() ? zoomed : Matrix4.identity();
+          animation = Matrix4Tween(
+            begin: controller.value,
+            end: end,
+          ).animate(CurveTween(curve: Curves.easeOut).animate(animationController));
+          animationController.forward(from: 0);
         },
-        child: InteractiveViewer(
-            clipBehavior: Clip.none,
-            transformationController: controller,
-            panEnabled: false,
-            scaleEnabled: false,
-            child: AspectRatio(aspectRatio: 1, child: Image.asset('images/catimage.jpg'))),
+        child: Column(
+          children: [
+            InteractiveViewer(
+                clipBehavior: Clip.none,
+                transformationController: controller,
+                panEnabled: false,
+                scaleEnabled: false,
+                child: AspectRatio(aspectRatio: 1, child: Image.asset('images/catimage.jpg'))),
+          ],
+        ),
       );
 }
